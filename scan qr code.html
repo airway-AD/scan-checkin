@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Démo check-in QR - Event HP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#F3F5F8; --surface:#FFFFFF; --ink:#13233F; --muted:#5E6B80; --line:#DCE2EA;
+  --brand:#1F4FD1; --ok:#138A4E; --ko:#C7353B; --warn:#C98A00;
+  --okbg:#E3F5EB; --kobg:#FBE6E7; --warnbg:#FFF4D6;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1626; --surface:#16213A; --ink:#E8EDF6; --muted:#9AA6BC; --line:#2A3752;
+    --brand:#6F95FF; --okbg:#133A28; --kobg:#44191C; --warnbg:#3D3110;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1626; --surface:#16213A; --ink:#E8EDF6; --muted:#9AA6BC; --line:#2A3752;
+  --brand:#6F95FF; --okbg:#133A28; --kobg:#44191C; --warnbg:#3D3110;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Sora",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.5}
+.wrap{max-width:980px;margin:0 auto;padding:20px 16px 40px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px}
+h1{font-size:1.5rem;margin:0;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:2px 0 0;font-size:.9rem}
+.counter{font-size:2.4rem;font-weight:700;line-height:1;text-align:right}
+.counter small{display:block;font-size:.8rem;font-weight:400;color:var(--muted);margin-top:4px}
+.tabs{display:flex;gap:6px;border-bottom:2px solid var(--line);margin-bottom:18px}
+.tab{background:none;border:none;font:inherit;font-weight:600;color:var(--muted);padding:10px 14px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tab[aria-selected="true"]{color:var(--brand);border-bottom-color:var(--brand)}
+.tab:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.panel[hidden]{display:none}
+.scan-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:720px){.scan-grid{grid-template-columns:1fr}}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+#reader{width:100%;min-height:240px;border-radius:10px;overflow:hidden;background:#000}
+#reader video{border-radius:10px}
+.btn{font:inherit;font-weight:600;border-radius:10px;padding:10px 16px;cursor:pointer;border:1px solid var(--brand);background:var(--brand);color:#fff}
+.btn.ghost{background:transparent;color:var(--brand)}
+.btn.small{padding:6px 10px;font-size:.85rem}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+input[type=text]{flex:1;min-width:0;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);text-transform:uppercase}
+.result{border-radius:14px;padding:22px 18px;min-height:170px;display:flex;flex-direction:column;justify-content:center;border:2px solid var(--line);background:var(--surface);transition:background .2s,border-color .2s}
+.result .state{font-size:1.6rem;font-weight:700;margin:0}
+.result .who{font-size:1.1rem;margin:6px 0 0}
+.result .meta{color:var(--muted);margin:2px 0 0;font-size:.9rem}
+.result.ok{background:var(--okbg);border-color:var(--ok)} .result.ok .state{color:var(--ok)}
+.result.ko{background:var(--kobg);border-color:var(--ko)} .result.ko .state{color:var(--ko)}
+.result.warn{background:var(--warnbg);border-color:var(--warn)} .result.warn .state{color:var(--warn)}
+.log{list-style:none;padding:0;margin:12px 0 0;font-size:.88rem}
+.log li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+.log .t{color:var(--muted);white-space:nowrap}
+h2{font-size:1rem;margin:0 0 4px}
+.hint{color:var(--muted);font-size:.85rem;margin:0}
+.guests{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.guest{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+.qr{background:#fff;padding:10px;border-radius:8px;line-height:0}
+.qr img,.qr canvas{width:150px;height:150px}
+.gname{font-weight:600;margin:4px 0 0}
+.gco{color:var(--muted);font-size:.85rem;margin:0}
+.code{font-weight:600;letter-spacing:.05em;font-size:.85rem;color:var(--brand)}
+.badge{font-size:.78rem;font-weight:600;padding:3px 10px;border-radius:99px;background:var(--bg);color:var(--muted)}
+.badge.in{background:var(--okbg);color:var(--ok)}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+@media (prefers-reduced-motion:reduce){.result{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Check-in Event HP</h1>
+      <p class="sub">Démo : chaque invité a son QR code, on le scanne à l'entrée pour valider sa présence.</p>
+    </div>
+    <div class="counter" id="counter">0 / 0<small>présents</small></div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="scan">Scanner</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="guests">Invités et QR codes</button>
+  </div>
+
+  <section class="panel" id="panel-scan">
+    <div class="scan-grid">
+      <div class="box">
+        <h2>Caméra</h2>
+        <p class="hint">Scanne un QR de l'onglet "Invités" affiché sur un autre écran.</p>
+        <div id="reader" style="margin-top:10px"></div>
+        <div class="row">
+          <button class="btn" id="camBtn">Activer la caméra</button>
+          <label class="btn ghost" for="photoInput" style="display:inline-block">Scanner via photo</label>
+          <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+        </div>
+        <div class="row">
+          <input type="text" id="manual" placeholder="Ou saisis un code, ex. HP26-A7K2" aria-label="Code invité">
+          <button class="btn ghost" id="manualBtn">Valider</button>
+        </div>
+      </div>
+      <div>
+        <div class="result" id="result">
+          <p class="state" style="color:var(--muted)">En attente de scan</p>
+          <p class="meta">Le résultat s'affiche ici.</p>
+        </div>
+        <div class="box" style="margin-top:14px">
+          <h2>Derniers scans</h2>
+          <ul class="log" id="log"><li><span class="t">Aucun scan pour l'instant.</span></li></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-guests" hidden>
+    <div class="toolbar">
+      <p class="hint">"Simuler le scan" permet de tester sans deuxième appareil.</p>
+      <button class="btn ghost small" id="resetBtn">Remettre les présences à zéro</button>
+    </div>
+    <div class="guests" id="guests"></div>
+  </section>
+</div>
+
+<script>
+const GUESTS = [
+  {code:"HP26-A7K2", name:"Salma Bennani", co:"Atlas Informatique"},
+  {code:"HP26-B3Q9", name:"Youssef El Idrissi", co:"Maghreb IT Solutions"},
+  {code:"HP26-C8M4", name:"Nadia Chraibi", co:"TechCom Rabat"},
+  {code:"HP26-D2X7", name:"Karim Tazi", co:"Data Systems Agadir"},
+  {code:"HP26-E5R1", name:"Imane Lahlou", co:"NetPro Tanger"},
+  {code:"HP26-F9W6", name:"Omar Benjelloun", co:"Infosys Maroc Distribution"}
+];
+const KEY = "checkin-demo-v1";
+let present = {};
+try { present = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e) { present = {}; }
+let logItems = [];
+
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(present)); } catch(e){} }
+function fmt(ts){ return new Date(ts).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}); }
+
+function updateCounter(){
+  const n = GUESTS.filter(g => present[g.code]).length;
+  document.getElementById("counter").innerHTML = n + " / " + GUESTS.length + "<small>présents</small>";
+}
+
+function showResult(kind, state, who, meta){
+  const r = document.getElementById("result");
+  r.className = "result " + kind;
+  r.innerHTML = '<p class="state">'+state+'</p>' + (who?'<p class="who">'+who+'</p>':'') + '<p class="meta">'+meta+'</p>';
+}
+
+function addLog(text){
+  logItems.unshift({text, t:Date.now()});
+  logItems = logItems.slice(0,6);
+  document.getElementById("log").innerHTML = logItems.map(l => '<li><span>'+l.text+'</span><span class="t">'+fmt(l.t)+'</span></li>').join("");
+}
+
+let lastCode = "", lastTime = 0;
+function checkIn(raw){
+  const code = String(raw).trim().toUpperCase();
+  const now = Date.now();
+  if (code === lastCode && now - lastTime < 2500) return; // évite les doubles lectures caméra
+  lastCode = code; lastTime = now;
+  const g = GUESTS.find(x => x.code === code);
+  if (!g){
+    showResult("ko","Code inconnu","", "« "+code+" » ne correspond à aucun invité.");
+    addLog("Refusé : "+code);
+  } else if (present[code]){
+    showResult("warn","Déjà enregistré", g.name+" - "+g.co, "Entré à "+fmt(present[code])+". QR peut-être partagé.");
+    addLog("Doublon : "+g.name);
+  } else {
+    present[code] = now; save();
+    showResult("ok","Bienvenue", g.name+" - "+g.co, "Présence validée à "+fmt(now)+".");
+    addLog("Entrée : "+g.name);
+  }
+  updateCounter(); renderGuests();
+  if (navigator.vibrate) { try{ navigator.vibrate(g && !present[code] ? 60 : 120); }catch(e){} }
+}
+
+function renderGuests(){
+  const wrap = document.getElementById("guests");
+  if (!wrap.dataset.built){
+    wrap.innerHTML = GUESTS.map(g => `
+      <div class="guest">
+        <div class="qr" id="qr-${g.code}"></div>
+        <p class="gname">${g.name}</p>
+        <p class="gco">${g.co}</p>
+        <span class="code">${g.code}</span>
+        <span class="badge" id="b-${g.code}"></span>
+        <button class="btn ghost small" data-sim="${g.code}">Simuler le scan</button>
+      </div>`).join("");
+    GUESTS.forEach(g => {
+      try { new QRCode(document.getElementById("qr-"+g.code), {text:g.code, width:300, height:300, correctLevel:QRCode.CorrectLevel.M}); }
+      catch(e){ document.getElementById("qr-"+g.code).textContent = "QR indisponible"; }
+    });
+    wrap.dataset.built = "1";
+  }
+  GUESTS.forEach(g => {
+    const b = document.getElementById("b-"+g.code);
+    if (present[g.code]) { b.className="badge in"; b.textContent="Présent à "+fmt(present[g.code]); }
+    else { b.className="badge"; b.textContent="Pas encore arrivé"; }
+  });
+}
+
+document.getElementById("guests").addEventListener("click", e => {
+  const c = e.target.closest("[data-sim]"); if (!c) return;
+  lastCode = ""; checkIn(c.dataset.sim); switchTab("scan");
+});
+
+function switchTab(name){
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.tab===name));
+  document.getElementById("panel-scan").hidden = name!=="scan";
+  document.getElementById("panel-guests").hidden = name!=="guests";
+}
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => switchTab(t.dataset.tab)));
+
+document.getElementById("manualBtn").addEventListener("click", () => {
+  const v = document.getElementById("manual").value; if (!v.trim()) return;
+  lastCode = ""; checkIn(v); document.getElementById("manual").value = "";
+});
+document.getElementById("manual").addEventListener("keydown", e => { if (e.key==="Enter") document.getElementById("manualBtn").click(); });
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  present = {}; save(); logItems = []; lastCode = "";
+  document.getElementById("log").innerHTML = '<li><span class="t">Aucun scan pour l\'instant.</span></li>';
+  showResult("", "En attente de scan", "", "Le résultat s'affiche ici.");
+  document.querySelector("#result .state").style.color = "var(--muted)";
+  updateCounter(); renderGuests();
+});
+
+let scanner = null, running = false;
+document.getElementById("camBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("camBtn");
+  if (typeof Html5Qrcode === "undefined"){ showResult("ko","Scanner indisponible","","La librairie de scan n'a pas chargé. Utilise la saisie manuelle."); return; }
+  if (running){ await scanner.stop(); running=false; btn.textContent="Activer la caméra"; return; }
+  try{
+    scanner = scanner || new Html5Qrcode("reader");
+    await scanner.start({facingMode:"environment"}, {fps:10, qrbox:{width:220,height:220}}, txt => checkIn(txt), () => {});
+    running = true; btn.textContent = "Arrêter la caméra";
+  }catch(err){
+    showResult("ko","Caméra bloquée","","Autorise l'accès à la caméra, ou ouvre la page dans un nouvel onglet. La saisie manuelle marche aussi.");
+  }
+});
+
+document.getElementById("photoInput").addEventListener("change", async e => {
+  const file = e.target.files && e.target.files[0]; if (!file) return;
+  if (typeof Html5Qrcode === "undefined"){ showResult("ko","Scanner indisponible","","La librairie de scan n'a pas chargé. Utilise la saisie manuelle."); return; }
+  try{
+    if (running){ await scanner.stop(); running=false; document.getElementById("camBtn").textContent="Activer la caméra"; }
+    scanner = scanner || new Html5Qrcode("reader");
+    const txt = await scanner.scanFile(file, false);
+    lastCode = ""; checkIn(txt);
+  }catch(err){
+    showResult("ko","QR non lu","","Reprends la photo plus près, bien à plat et nette.");
+  }
+  e.target.value = "";
+});
+
+updateCounter(); renderGuests();
+</script>
+</body>
+</html>
